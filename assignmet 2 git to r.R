@@ -5,3 +5,4 @@ return(sum(assignment2) / length(assignment2))
  
    result <- myMean(assignment2)
    print(result)
+#results is 19.25
