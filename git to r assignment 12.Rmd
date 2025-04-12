@@ -1,0 +1,89 @@
+---
+title: "Assignment 12 r prog"
+author: "Holden Blank"
+date: "2025-04-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+The Blankman package provides tools for performing the Friedman test, a non-parametric test for analyzing differences across multiple related samples. This document outlines the primary functions being developed, including their purpose, usage, inputs, outputs, and examples.
+
+Function 1:
+Performs the Friedman test on a tidy data frame containing repeated measures or block design data.
+
+```{r}
+run_friedman_test <- function(data, subject_col, treatment_col, response_col) {
+  formula <- as.formula(paste(response_col, "~", treatment_col, "|", subject_col))
+  result <- stats::friedman.test(formula, data = data)
+
+  summary_table <- data %>%
+    group_by(.data[[treatment_col]]) %>%
+    summarise(Mean_Rank = mean(rank(-.data[[response_col]])), .groups = "drop")
+
+  list(
+    statistic = result$statistic,
+    p_value = result$p.value,
+    df = result$parameter,
+    method = result$method,
+    summary = summary_table
+  )
+}
+```
+
+Function 2:
+Visualizes the average ranks of treatments from the Friedman test using a bar plot.
+
+```{r}
+plot_friedman_ranks <- function(data, subject_col, treatment_col, response_col) {
+  ranked_data <- data %>%
+    group_by(.data[[subject_col]]) %>%
+    mutate(Rank = rank(-.data[[response_col]])) %>%
+    ungroup()
+
+  summary_ranks <- ranked_data %>%
+    group_by(.data[[treatment_col]]) %>%
+    summarise(Mean_Rank = mean(Rank), .groups = "drop")
+
+  ggplot(summary_ranks, aes(x = .data[[treatment_col]], y = Mean_Rank)) +
+    geom_col() +
+    labs(title = "Mean Ranks by Treatment", x = "Treatment", y = "Mean Rank") +
+    theme_minimal()
+}
+```
+
+Function 3:
+Generates a tidy summary table of mean ranks and standard deviations by treatment group.
+```{r}
+get_friedman_summary <- function(data, subject_col, treatment_col, response_col) {
+  ranked_data <- data %>%
+    group_by(.data[[subject_col]]) %>%
+    mutate(Rank = rank(-.data[[response_col]])) %>%
+    ungroup()
+
+  ranked_data %>%
+    group_by(.data[[treatment_col]]) %>%
+    summarise(
+      Mean_Rank = mean(Rank),
+      SD_Rank = sd(Rank),
+      .groups = "drop"
+    )
+}
+```
+
+Notes
+All functions require tidy (long-format) data. A helper function could reshape wide -> long.
+
+The plotting function uses descending ranks to reflect higher scores.
+
+Future versions may include post-hoc comparison support (e.g., Nemenyi test).
+
+Testing edge cases with small sample sizes is important to ensure stability.
+
+Package will be extended with vignettes and unit tests.
+
